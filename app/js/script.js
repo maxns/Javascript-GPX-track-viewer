@@ -13,20 +13,30 @@ function set_feature(bool, id, callback) {
 		$('body').removeClass(id);
 	}
 }
+function initMap() {
+	// Create a map object and specify the DOM element for display.
+	map = new google.maps.Map(document.getElementById('map'), {
+		center: {lat: -34.397, lng: 150.644},
+		scrollwheel: true,
+		zoom: 8
+	});
+
+}
 
 $(document).ready(function () {
 	var updateLayout = function() {
 		// height
 		var height = $(window).height();
-		var profileHeight = draw_profile ? $('#profilegraph').height() : 0;
-		$('#mapwrapper').height(height - profileHeight);
-		$('#slopevis').height(height - profileHeight);
+		var profileHeight = draw_profile ? $('#profilegraph').height() + $('#profiletable').height() : 0;
+		$('#mapwrapper').height(height - profileHeight );
+		$('#slopevis').height(height - profileHeight );
 
 		// height
 		var width = $(window).width();
 		var slopeWidth = draw_slope ? $('#slopevis').width() : 0;
 		$('#mapwrapper').width(width- slopeWidth);
 	};
+
 
 	var speedramp = [
 		{value: 0,  color: '#0000FF'},
@@ -44,8 +54,8 @@ $(document).ready(function () {
 	];
 	writeLegend(speedramp);
 
-	var map = createMap('map');
-	var parser = createParser(map, speedramp, sloperamp);
+	parser = createParser(map, speedramp, sloperamp);
+
 
 	var slopevis;
 	var profilevis;
@@ -109,11 +119,8 @@ function writeLegend(ramp) {
 }
 
 function createMap(mapElementId) {
-	var map = new GMap2(document.getElementById(mapElementId));
-	map.addMapType(G_PHYSICAL_MAP);
-	map.setMapType(G_PHYSICAL_MAP);
-	map.addControl(new GLargeMapControl());
-	map.addControl(new GMapTypeControl());
+	var map = new google.maps.Map(document.getElementById(mapElementId));
+
 	return map;
 }
 
@@ -145,7 +152,7 @@ function createParser(map, speedramp, sloperamp) {
 		}
 
 	});
-	parser.SetTrackWidth(4);
+	parser.SetTrackWidth(1);
 	// parser.SetMaxTrackPointDelta(0);
 
 	return parser;

@@ -19,7 +19,7 @@ jQuery(document).ready(function () {
 				var files = e.originalEvent.dataTransfer.files;
 				for (var i=0; i<files.length; i++) {
 					(function(){
-						var filename = files[i].fileName;
+						var filename = files[i].name;
 						var reader = new FileReader();
 						reader.onload = function (evt) {
 							fileCallback(evt.target.result, filename);

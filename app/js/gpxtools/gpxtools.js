@@ -1,13 +1,23 @@
 /*global DOMParser, ActiveXObject */
 /*global func */
 /*global console, window */
-/*global GLatLng, GLatLngBounds, GPolyline, GEvent, GMarker */
+/*global google.maps.LatLng, google.maps.LatLngBounds, google.maps.Polyline, google.maps.Event, google.maps.Marker */
+// process extensions
+var GPX_extensions = [
+	{name:'hr',tag:'hr'},
+	{name:'cadence',tag:'cadence'},
+	{name:'temp',tag:'temp'},
+	{name:'distance',tag:'distance'},
+	{name:'altitude',tag:'altitude'},
+	{name:'seaLevelPressure',tag:'seaLevelPressure'},
+	{name:'speed',tag:'speed'},
+	{name:'verticalSpeed',tag:'verticalSpeed'},
+];
 
 function GPXParser(map)
 {
 	this.xmlDoc = null;
 	this.map = map;
-	this.map.enableScrollWheelZoom();
 	this.trackcolor = "#ff00ff"; // red
 	this.segmentcolorprovider = function (pnt1, pnt2) {
 		return this.trackcolor;
@@ -108,7 +118,8 @@ GPXParser.prototype.ParseGpx = function (xmlstring)
 	data = {
 		tracks: Functional.reduce(
 			function (list, track) {
-				return list.push(gpxParser.parseTrack(track));
+				list.push(gpxParser.parseTrack(track));
+				return list;
 			},
 			[],
 			xmlDoc.documentElement.getElementsByTagName("trk")),
@@ -220,7 +231,7 @@ GPXParser.prototype.parseRoutePoint = function (routepoint) {
 
 	pnt.lat = parseFloat(routepoint.getAttribute('lat'));
 	pnt.lon = parseFloat(routepoint.getAttribute('lon'));
-	pnt.latlng = new GLatLng(pnt.lat,pnt.lon);
+	pnt.latlng = new google.maps.LatLng(pnt.lat,pnt.lon);
 		
 	var names = routepoint.getElementsByTagName("name");
 	if (names[0] !== undefined) {
@@ -236,7 +247,6 @@ GPXParser.prototype.parseRoutePoint = function (routepoint) {
 
 	return pnt;
 };
-
 
 GPXParser.prototype.parseWaypoint = function (xmlwaypoint) {
 	var waypoint = {
@@ -285,7 +295,7 @@ GPXParser.prototype.parseWaypoint = function (xmlwaypoint) {
 
 GPXParser.prototype.DrawGpx = function (gpxdata, maptype, drawTracks, drawWaypoints, drawRoutes) {
 	if (maptype == null) {
-		maptype = this.map.getCurrentMapType();
+		maptype = this.map.getMapTypeId();
 	}
 
 	if (drawTracks == null) {
@@ -333,8 +343,14 @@ GPXParser.prototype._drawSegment = function (segment, segmentcolorprovider, trac
 		if (this._pntDistance(lastpnt, pnt) > this.mintrackpointdelta)
 		{
 			var color = segmentcolorprovider(lastpnt, pnt);
-			var polyline = new GPolyline(linesegment, color, trackwidth);
-			this._addOverlay(polyline);
+			var polyline = new google.maps.Polyline({
+				path: linesegment,
+				strokeColor: color,
+				strokeWeight: trackwidth
+			}
+
+			);
+			polyline.setMap(this.map);
 		}
 
 		lastpnt = pnt;
@@ -353,7 +369,7 @@ GPXParser.prototype._drawRoute = function (route, color, trackwidth) {
 		var pnt = route.points[i];
 		var linesegment = [lastpnt.latlng, pnt.latlng];
 
-		var polyline = new GPolyline(linesegment, color, trackwidth);
+		var polyline = new google.maps.Polyline(linesegment, color, trackwidth);
 		this._addOverlay(polyline);
 		
 		this._drawWaypoint(pnt);
@@ -363,8 +379,8 @@ GPXParser.prototype._drawRoute = function (route, color, trackwidth) {
 };
 
 GPXParser.prototype._drawWaypoint = function (waypoint) {
-	var marker = new GMarker(new GLatLng(waypoint.lat,waypoint.lon));
-	GEvent.addListener(marker, "click", function () {
+	var marker = new google.maps.Marker(new google.maps.LatLng(waypoint.lat,waypoint.lon));
+	google.maps.Event.addListener(marker, "click", function () {
 		marker.openInfoWindowHtml(waypoint.html);
 	});
 
@@ -379,6 +395,7 @@ GPXParser.prototype._degToRad = function (deg) {
 };
 
 // thanks: http://www.movable-type.co.uk/scripts/latlong.html
+// returns distance between two points, in km
 GPXParser.prototype._pntDistance = function (pnt1, pnt2) {
 
 	var lat1 = pnt1.lat;
@@ -403,7 +420,7 @@ GPXParser.prototype.parseTrackPoint = function (trackpoint, lastpnt) {
 
 	pnt.lat = parseFloat(trackpoint.getAttribute('lat'));
 	pnt.lon = parseFloat(trackpoint.getAttribute('lon'));
-	pnt.latlng = new GLatLng(pnt.lat,pnt.lon);
+	pnt.latlng = new google.maps.LatLng(pnt.lat,pnt.lon);
 
 	var elmsElevation = trackpoint.getElementsByTagName('ele');
 	if (elmsElevation.length > 0) {
@@ -423,7 +440,21 @@ GPXParser.prototype.parseTrackPoint = function (trackpoint, lastpnt) {
 			pnt.elediff = pnt.ele - lastpnt.ele;
 	}
 
+	this.processExtensions(pnt, trackpoint);
+
 	return pnt;
+};
+
+GPXParser.prototype.processExtensions = function(target, element) {
+	for(var i in GPX_extensions) {
+
+		var extEl = element.getElementsByTagName(GPX_extensions[i].tag);
+
+		if(extEl.length > 0) {
+			target[GPX_extensions[i].name] = parseFloat(extEl[0].textContent);
+		}
+	}
+
 };
 
 GPXParser.prototype._centerAndZoom = function (gpxdata, maptype)
@@ -463,7 +494,7 @@ GPXParser.prototype._centerAndZoom = function (gpxdata, maptype)
 
 	if ((minlat == maxlat) && (minlat == 0))
 	{
-		this.map.setCenter(new GLatLng(49.327667, -122.942333), 14);
+		this.map.setCenter(new google.maps.LatLng(49.327667, -122.942333), 14);
 		return;
 	}
 
@@ -471,15 +502,44 @@ GPXParser.prototype._centerAndZoom = function (gpxdata, maptype)
 	var centerlon = (maxlon + minlon) / 2;
 	var centerlat = (maxlat + minlat) / 2;
 
-	var bounds = new GLatLngBounds(new GLatLng(minlat, minlon), new GLatLng(maxlat, maxlon));
+	var bounds = new google.maps.LatLngBounds(new google.maps.LatLng(minlat, minlon), new google.maps.LatLng(maxlat, maxlon));
 
-	this.map.setCenter(new GLatLng(centerlat, centerlon), this.map.getBoundsZoomLevel(bounds), maptype);
-};
+	//this.map.setCenter(new google.maps.LatLng(centerlat, centerlon), getZoomByBounds(this.map,bounds));
+	this.map.fitBounds( bounds );
+}
+;
+/**
+ * Returns the zoom level at which the given rectangular region fits in the map view.
+ * The zoom level is computed for the currently selected map type.
+ * @param {google.maps.Map} map
+ * @param {google.maps.LatLngBounds} bounds
+ * @return {Number} zoom level
+ **/
+function getZoomByBounds( map, bounds ){
+	var MAX_ZOOM = map.mapTypes.get( map.getMapTypeId() ).maxZoom || 21 ;
+	var MIN_ZOOM = map.mapTypes.get( map.getMapTypeId() ).minZoom || 0 ;
+
+	var ne= map.getProjection().fromLatLngToPoint( bounds.getNorthEast() );
+	var sw= map.getProjection().fromLatLngToPoint( bounds.getSouthWest() );
+
+	var worldCoordWidth = Math.abs(ne.x-sw.x);
+	var worldCoordHeight = Math.abs(ne.y-sw.y);
+
+	//Fit padding in pixels
+	var FIT_PAD = 40;
+
+	for( var zoom = MAX_ZOOM; zoom >= MIN_ZOOM; --zoom ){
+		if( worldCoordWidth*(1<<zoom)+2*FIT_PAD < $(map.getDiv()).width() &&
+			worldCoordHeight*(1<<zoom)+2*FIT_PAD < $(map.getDiv()).height() )
+			return zoom;
+	}
+	return 0;
+}
 
 GPXParser.prototype._addOverlay = function (marker)
 {
 	this.markers.push(marker);
-	this.map.addOverlay(marker);
+	marker.setMap(this.map);
 }
 
 GPXParser.prototype._clearMarkers = function ()

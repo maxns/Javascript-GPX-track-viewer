@@ -12,7 +12,7 @@
  *
  * Constructor DotMarker(point, image, info)
  *
- *   point: GLatLng
+ *   point: google.maps.LatLng
  *   image: url to image
  *   info:  array of information; first element is tooltip
  *
@@ -40,7 +40,7 @@ DotMarker.prototype.initialize = function(map) {
 
   try { div.style.cursor='pointer'; } catch(e) { }
 
-  GEvent.bindDom(div, 'click', this, function() { GEvent.trigger(this, 'click', this) });
+  google.maps.Event.bindDom(div, 'click', this, function() { google.maps.Event.trigger(this, 'click', this) });
 
   map.getPane(G_MAP_MARKER_PANE).appendChild(div);
 
@@ -74,19 +74,19 @@ function initialize() {
   if (GBrowserIsCompatible()) {
 
     var map = new GMap2(document.getElementById("map_canvas"));
-    map.setCenter(new GLatLng(38,-96),4);
+    map.setCenter(new google.maps.LatLng(38,-96),4);
     map.setUIToDefault();
 
     var markers = [];
     for (var i=0; i<airports.length; i++) {
 
-      var pt = new GLatLng(airports[i].y, airports[i].x);
+      var pt = new google.maps.LatLng(airports[i].y, airports[i].x);
 
       var color =  airports[i].p.length > 0 ? airports[i].n.indexOf("Intl") > 0 || airports[i].n.indexOf("International") > 0 ? "blue" : "red" : "yellow";
 
       markers[i] = new DotMarker(pt, color + ".gif", [airports[i].n, airports[i].p]);
 
-      GEvent.addListener(markers[i], "click", function(m) {
+      google.maps.Event.addListener(markers[i], "click", function(m) {
         var html;
         if (m.info_[1].length > 0) {
           html = '<div style="width:233px; height:200px; overflow:hidden">';

@@ -52,6 +52,17 @@ body.slopevis #wrapper {
 	display: none;
 }
 
+#profilegraph-chart {
+	height: 100%;
+	float: left;
+	width: 80%;
+}
+#profilegraph-table {
+	height: 100%;
+	width: 20%;
+	float: right;
+}
+
 body.profilegraph #profilegraph {
 	display: block;
 
@@ -59,13 +70,10 @@ body.profilegraph #profilegraph {
 	bottom: 0px;
 	left: 0;
 
-	height: 150px;
+	height: 250px;
 	width: 100%;
 
 	background: #eee;
-}
-
-body.profilegraph #wrapper {
 }
 
 
